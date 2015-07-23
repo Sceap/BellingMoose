@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="4dp">
+
+    <TextView
+        android:id="@+id/weightWarning"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="No overweight detected"
+        android:padding="16dp"
+        android:gravity="center"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
+    <com.androidplot.xy.XYPlot
+        android:id="@+id/weightDisplay"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_weight="1"
+        android:background="@drawable/graph_bg"
+        android:layout_margin="2dp"
+
+        androidPlot.titleWidget.labelPaint.textSize="@dimen/title_font_size"
+        androidPlot.domainLabelWidget.labelPaint.textSize="@dimen/domain_label_font_size"
+        androidPlot.rangeLabelWidget.labelPaint.textSize="@dimen/range_label_font_size"
+        androidPlot.graphWidget.marginTop="20dp"
+        androidPlot.graphWidget.marginLeft="35dp"
+        androidPlot.graphWidget.marginBottom="25dp"
+        androidPlot.graphWidget.marginRight="13dp"
+        androidPlot.graphWidget.rangeLabelPaint.textSize="@dimen/range_tick_label_font_size"
+        androidPlot.graphWidget.rangeOriginLabelPaint.textSize="@dimen/range_tick_label_font_size"
+        androidPlot.graphWidget.domainLabelPaint.textSize="@dimen/domain_tick_label_font_size"
+        androidPlot.graphWidget.domainOriginLabelPaint.textSize="@dimen/domain_tick_label_font_size"
+        androidPlot.legendWidget.textPaint.textSize="@dimen/legend_text_font_size"
+        androidPlot.legendWidget.iconSizeMetrics.heightMetric.value="15dp"
+        androidPlot.legendWidget.iconSizeMetrics.widthMetric.value="15dp"
+        androidPlot.legendWidget.heightMetric.value="25dp"
+        androidPlot.legendWidget.positionMetrics.anchor="right_bottom"/>
+
+
+        <RelativeLayout
+            android:layout_width="22dp"
+            android:layout_height="match_parent"
+            android:padding="0dp"
+            android:layout_margin="0dp">
+
+            <ProgressBar
+                android:id="@+id/vertical_progressbar"
+                style="@style/Widget.ProgressBar.Vertical"
+                android:layout_width="12dip"
+                android:layout_margin="5dp"
+                android:layout_marginRight="10dp"
+                android:layout_height="match_parent"
+                />
+
+            <View
+                android:id="@+id/maxWeight"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="@color/accent_material_light" />
+            <View
+                android:id="@+id/trsWeight"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="@color/ripple_material_light" />
+        </RelativeLayout>
+
+        <!--  -->
+    </LinearLayout>
+
+</LinearLayout>
