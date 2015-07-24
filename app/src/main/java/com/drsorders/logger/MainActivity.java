@@ -27,7 +27,6 @@
 package com.drsorders.logger;
 
 /* All the needed Android Libraries are loaded below */
-
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.graphics.Color;
@@ -60,6 +59,8 @@ import com.androidplot.xy.LineAndPointFormatter;
 import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.XYPlot;
 
+/* Those Java libraries are used for extracting */
+/* the datas from the Bluetooth port            */
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -73,8 +74,6 @@ import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/* Those Java libraries are used for extracting */
-/* the datas from the Bluetooth port            */
 
 
 /* MainActivity: for ease-of-use sake, all the logger app is designed around a unique activity     *
@@ -83,7 +82,7 @@ import java.util.regex.Pattern;
 public class MainActivity extends ActionBarActivity implements ActionBar.TabListener, bluetoothDialog.Event
 {
     private static final String TAG = "drsorders";
-    // The HISTORY_SIZE variable defines the number of point showing
+    // The HISTORY_SIZE variable defines the number of points showed
     // simultaneously on a plot
     private static final int HISTORY_SIZE = 100;
     
@@ -105,77 +104,21 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     private static int weightThreshold = 60;
 
 
+    // cmdValue is used to get a 5 digits value from an EditText
+    // and send it to the cane.
+    // thrValue is used to get the new threshold value from the
+    // seekBar.
     private static int cmdValue, thrValue;
+    // customCommand stores the command written in the EditText
     private static String customCommand;
+    // logFlag is used together with logSD, logUSB and logBt to
+    // store the states of the different sending methods
     private static boolean[] logFlag = new boolean[3];
     private static final int logSD=0,logUSB=1,logBt=2;
 
-
+    // The bluetooth Dialog Fragment simplify the connection
+    // to a bluetooth peripheral
     private static DialogFragment btFragment;
-
-    // This dummy String table is used to test the RegEx detection
-    private static String[] dummy = {
-            "|0015061817280004,-00131,+00076,+00051,+00296,+00016,+17020,-03936|",
-            "|0015061817280005,-00126,+00083,+00052,+00220,-00068,+17024,-03936|",
-            "|0015061817280006,-00137,+00072,+00043,+00216,-00008,+17232,-03936|",
-            "|0015061817280007,-00128,+00077,+00047,+00332,-00092,+16992,-03904|",
-            "|0015061817280008,-00136,+00086,+00040,+00280,+00012,+17068,-03936|",
-            "|0015061817280009,-00140,+00076,+00046,+00312,-00064,+17088,-03904|",
-            "|0015061817280010,-00133,+00082,+00044,+00280,+00032,+17088,-03936|",
-            "|0015061817280011,-00127,+00067,+00050,+00304,+00028,+17112,-03936|",
-            "|0015061817280012,-00132,+00081,+00049,+00232,-00036,+17144,-03936|",
-            "|0015061817280013,-00115,+00087,+00047,+00260,-00104,+16880,-03936|",
-            "|0015061817280014,-00138,+00079,+00050,+00284,-00088,+17184,-03904|",
-            "|0015061817280015,-00126,+00090,+00054,+00416,-00040,+16840,-03936|",
-            "|0015061817280016,-00149,+00076,+00045,+00264,-00032,+17296,-03904|",
-            "|0015061817280017,-00137,+00072,+00044,+00272,-00024,+17040,-03904|",
-            "|0015061817280018,-00133,+00077,+00049,+00316,-00116,+17164,-03936|",
-            "|0015061817280019,-00135,+00076,+00039,+00312,-00032,+17088,-03968|",
-            "|0015061817280020,-00122,+00074,+00050,+00440,-00084,+17200,-03936|",
-            "|0015061817280021,-00135,+00082,+00050,+00176,+00028,+17068,-03936|",
-            "|0015061817280022,-00142,+00082,+00053,+00208,-00068,+17124,-03936|",
-            "|0015061817280023,-00142,+00084,+00049,+00408,-00020,+17064,-03936|",
-            "|0015061817280024,-00139,+00075,+00041,+00360,-00108,+17060,-03904|",
-            "|0015061817280025,-00129,+00081,+00049,+00296,+00004,+17168,-03904|",
-            "|0015061817280026,-00121,+00078,+00044,+00340,-00076,+17092,-03904|",
-            "|0015061817280027,-00128,+00079,+00053,+00372,-00044,+16924,-03936|",
-            "|0015061817280028,-00123,+00076,+00047,+00364,-00032,+17204,-03936|",
-            "|0015061817280029,-00125,+00073,+00055,+00356,+00016,+17112,-03936|",
-            "|0015061817280030,-00128,+00075,+00047,+00504,-00024,+17140,-03904|",
-            "|0015061817280031,-00134,+00074,+00047,+00364,-00024,+17172,-03936|",
-            "|0015061817280032,-00141,+00075,+00046,+00276,-00036,+17140,-03904|",
-            "|0015061817280033,-00141,+00075,+00046,+00276,-00036,+17140,-03904|",
-            "|0015061817280034,-00129,+00075,+00046,+00196,+00016,+17112,-03936|",
-            "|0015061817280035,-00120,+00074,+00047,+00328,+00016,+16968,-03936|",
-            "|0015061817280036,-00140,+00070,+00048,+00264,+00036,+17208,-03936|",
-            "|0015061817280037,-00115,+00074,+00047,+00284,-00048,+17172,-03936|",
-            "|0015061817280038,-00131,+00072,+00045,+00256,-00028,+17116,-03936|",
-            "|0015061817280039,-00136,+00080,+00050,+00280,-00088,+17020,-03904|",
-            "|0015061817280040,-00125,+00079,+00055,+00228,+00124,+17028,-03936|",
-            "|0015061817280041,-00138,+00075,+00050,+00380,-00040,+17164,-03936|",
-            "|0015061817280042,-00139,+00072,+00044,+00332,-00036,+17052,-03904|",
-            "|0015061817280043,-00121,+00073,+00053,+00228,-00164,+17164,-03936|",
-            "|0015061817280044,-00135,+00084,+00053,+00264,+00036,+17080,-03936|",
-            "|0015061817280045,-00134,+00078,+00046,+00268,-00100,+17096,-03936|",
-            "|0015061817280046,-00144,+00083,+00045,+00300,-00060,+16968,-03936|",
-            "|0015061817280047,-00141,+00071,+00052,+00256,+00004,+17132,-03904|",
-            "|0015061817280048,-00136,+00066,+00055,+00268,-00068,+17240,-03936|",
-            "|0015061817280049,-00132,+00073,+00039,+00284,+00008,+17116,-03936|",
-            "|0015061817280050,-00137,+00069,+00058,+00212,-00088,+17004,-03904|",
-            "|0015061817280051,-00131,+00083,+00058,+00356,-00020,+17000,-03936|",
-            "|0015061817280052,-00147,+00073,+00049,+00244,-00088,+17176,-03936|",
-            "|0015061817280053,-00130,+00074,+00053,+00332,-00080,+17100,-03936|",
-            "|0015061817280054,-00127,+00070,+00049,+00312,-00032,+17172,-03936|",
-            "|0015061817280055,-00118,+00075,+00051,+00328,+00044,+16864,-03936|",
-            "|0015061817280056,-00130,+00065,+00050,+00240,+00064,+17112,-03936|",
-            "|0015061817280057,-00127,+00073,+00057,+00372,-00044,+17072,-03936|",
-            "|0015061817280059,-00120,+00078,+00047,+00304,+00004,+17160,-03936|",
-            "|0015061817280060,-00118,+00073,+00049,+00252,-00064,+16976,-03936|",
-            "|0015061817280061,-00139,+00077,+00050,+00360,+00020,+17060,-03936|",
-            "|0015061817280062,-00122,+00081,+00047,+00340,-00044,+16972,-03936|",
-            "|0015061817280063,-00127,+00069,+00042,+00352,+00024,+17032,-03936|",
-            "|0015061817280064,-00129,+00079,+00044,+00240,+00004,+16944,-03904|"
-    };
 
     // The following are Threads and Runnables used to keep the app
     // updated
@@ -186,6 +129,9 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     // The mainActivity implements multiple pages
     SectionsPagerAdapter mSectionsPagerAdapter;
     ViewPager mViewPager;
+
+    // Keep track of the Menu item to change the title of the item
+    Menu menu;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -226,7 +172,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         }
 
 
-        /* Next we start constructing the graphs, stating by allocating the series  */
+        /* Next we start constructing the graphs, starting by allocating the series  */
 
         // Series 0 to 2 contain the accelerometer graphs
         series[0] = new SimpleXYSeries("X");
@@ -244,7 +190,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         // Series 7 contains the weight history
         series[7] = new SimpleXYSeries("Weight");
 
-        /* */
+        /* Then we create a runnable to update the graph displays regularly         */
         data = new updateGraph();
   }
 
@@ -253,6 +199,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         // Inflate the menu items for use in the action bar
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.actions_main, menu);
+
+        this.menu = menu;
 
         return super.onCreateOptionsMenu(menu);
     }
@@ -263,55 +211,12 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         switch (item.getItemId()) {
             case R.id.action_connect:
 
+                // When the menu item is pressed, either open the
+                // bluetoothDialog if the device isn't connected,
+                // or close an opened connection
                 if(!isConnected) {
                     btFragment = new bluetoothDialog();
                     btFragment.show(getSupportFragmentManager(), "Bluetooth");
-                    /*
-                    BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-                    if (mBluetoothAdapter == null) {
-                        // Device does not support Bluetooth
-                        Log.d(TAG,"Sorry, No Bluetooth antenna found!");
-                    }
-                    if (!mBluetoothAdapter.isEnabled()) {
-                        Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                        startActivityForResult(enableBtIntent, 1);
-                    }
-
-
-                    Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
-                    // If there are paired devices
-                    if (pairedDevices.size() > 0) {
-                        // Loop through paired devices
-                        for (BluetoothDevice device : pairedDevices) {
-                            // Search for a K-Netic device
-                            if(device.getName().contains("K-Netic")) {
-                                Log.d(TAG,device.getAddress());
-                                for (ParcelUuid uuid: device.getUuids()) {
-                                    uuid.getUuid();
-                                    Log.d(TAG, "UUID: " + uuid.getUuid().toString());
-                                    try {
-                                        bluetoothSocket = device.createInsecureRfcommSocketToServiceRecord(uuid.getUuid());
-
-                                        bluetoothSocket.connect();
-
-                                        if(bluetoothSocket.isConnected()) {
-                                            btThread = new ConnectedThread(bluetoothSocket);
-                                            btThread.start();
-                                            isConnected = true;
-
-                                            Log.d(TAG,"Connected to device");
-
-                                            item.setTitle("Disconnect");
-
-                                            break;
-                                        }
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            }
-                        }
-                    }*/
                 }   else {
                     try {
                         bluetoothSocket.close();
@@ -376,10 +281,10 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                         btThread = new ConnectedThread(bluetoothSocket);
                         btThread.start();
                         isConnected = true;
+                        menu.getItem(0).setTitle("Disconnect");
 
                         Log.d(TAG,"Connected to device");
 
-                        //item.setTitle("Disconnect");
                         btFragment.dismiss();
 
                         break;
@@ -643,7 +548,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                                     series[4].addLast(ms, extractValue(matcher.group(4)));
                                     series[5].addLast(ms, extractValue(matcher.group(5)));
                                     series[6].addLast(ms, extractValue(matcher.group(6)));
-                                    series[7].addLast(ms, 600-extractValue(matcher.group(10)));
+                                    series[7].addLast(ms, extractValue(matcher.group(10)));
                                 } else {
                                     errorCounter++;
                                     if(errorCounter>10)
@@ -756,7 +661,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
                     graphs[7] = (XYPlot) rootView.findViewById(R.id.weightDisplay);
 
-                    graphs[7].setRangeBoundaries(0, 600, BoundaryMode.FIXED);
+                    graphs[7].setRangeBoundaries(0, 150, BoundaryMode.FIXED);
                     graphs[7].setDomainBoundaries(0, 600, BoundaryMode.AUTO);
                     graphs[7].setRangeStepValue(10);
                     graphs[7].setDomainStepValue(5);
@@ -980,7 +885,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
                                         pB.hasFocus();
                                         if(series[7].size()>2)
-                                            pB.setProgress((series[7].getY(series[7].size()-3).intValue()/6));
+                                            pB.setProgress((series[7].getY(series[7].size()-3).intValue()*2/3));
 
 
 
@@ -1019,6 +924,15 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
                                 thrValue = ((SeekBar)rootView.findViewById(R.id.weightSeek)).getProgress();
 
+                                if(getActivity()!=null)
+                                    getActivity().runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            ((TextView)rootView.findViewById(R.id.weightKg)).setText(thrValue+"");
+                                            ((TextView)rootView.findViewById(R.id.weightLbs)).setText((thrValue*141>>6)+"");
+                                        }
+                                });
+
                                 logFlag[logSD] = ((CheckBox)rootView.findViewById(R.id.SDChk)).isChecked();
                                 logFlag[logUSB] = ((CheckBox)rootView.findViewById(R.id.USBChk)).isChecked();
                                 logFlag[logBt] = ((CheckBox)rootView.findViewById(R.id.BTChk)).isChecked();
@@ -1049,7 +963,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             btThread.write(".".getBytes());
             btThread.write(("#MNS"+String.format("%05d",d.getMinutes())).getBytes());
             btThread.write(".".getBytes());
-            btThread.write(("#SEC"+String.format("%05d",d.getSeconds())).getBytes());
+            btThread.write(("#SEC" + String.format("%05d", d.getSeconds())).getBytes());
             btThread.write(".".getBytes());
     }
 
@@ -1082,15 +996,15 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             btThread.write(".".getBytes());
             btThread.write(("#USB0000"+(logFlag[logUSB]?'1':'0')).getBytes());
             btThread.write(".".getBytes());
-            btThread.write(("#BLU0000"+(logFlag[logBt]?'1':'0')).getBytes());
+            btThread.write(("#BLU0000" + (logFlag[logBt] ? '1' : '0')).getBytes());
             btThread.write(".".getBytes());
     }
 
     public void sendWeightThreshold(View v) {
-        Log.d(TAG,("#THR" + String.format("%05d", thrValue)));
+        Log.d(TAG, ("#THR" + String.format("%05d", thrValue)));
         if(isConnected) {
             btThread.write(("#THR" + String.format("%05d", thrValue)).getBytes());
-            weightThreshold = thrValue/6;
+            weightThreshold = thrValue*2/3;
         }
     }
 

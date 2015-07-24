@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 
 import java.util.ArrayList;
@@ -22,9 +23,11 @@ import java.util.Set;
 /**
  * Created by Jeremie on 7/10/2015.
  */
-public class bluetoothDialog extends DialogFragment {
+public class bluetoothDialog extends DialogFragment implements View.OnClickListener {
     public static AlertDialog d;
     public Event mEvent;
+    public View rootView;
+    public Button rescanBtn;
 
     private ArrayList<BluetoothDevice> uuidList;
 
@@ -66,10 +69,6 @@ public class bluetoothDialog extends DialogFragment {
         // Get the layout inflater
         LayoutInflater inflater = getActivity().getLayoutInflater();
 
-        // Inflate and set the layout for the dialog
-        // Pass null as the parent view because its going in the dialog layout
-        View rootView = inflater.inflate(R.layout.bluetooth_dialog, null);
-        ListView deviceList = (ListView) rootView.findViewById(R.id.bluetoothDevices);
 
         BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
@@ -81,24 +80,13 @@ public class bluetoothDialog extends DialogFragment {
             startActivityForResult(enableBtIntent, 1);
         }
 
+        // Inflate and set the layout for the dialog
+        // Pass null as the parent view because its going in the dialog layout
+        rootView = inflater.inflate(R.layout.bluetooth_dialog, null);
+        rescanBtn = (Button)rootView.findViewById(R.id.rescanBtn);
+        rescanBtn.setOnClickListener(this);
 
-        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
-        ArrayList list = new ArrayList();
-        uuidList = new ArrayList();
-        // If there are paired devices
-        if (pairedDevices.size() > 0) {
-            // Loop through paired devices
-            for (BluetoothDevice device : pairedDevices) {
-                if(device.getName().contains("K-Netic")) {
-                    list.add(device.getName() + "\n" + device.getAddress());
-                    uuidList.add(device);
-                }
-            }
-        }
-
-        final ArrayAdapter adapter = new ArrayAdapter(getActivity(),android.R.layout.simple_list_item_1, list);
-        deviceList.setAdapter(adapter);
-        deviceList.setOnItemClickListener(myListClickListener); //Method called when the device from the list is clicked
+        rescan();
 
         builder.setView(rootView);
         return builder.create();
@@ -111,5 +99,35 @@ public class bluetoothDialog extends DialogFragment {
             mEvent.sendUuids(uuidList.get(arg2));
         }
     };
+
+    @Override
+    public void onClick(View v) {
+        if(R.id.rescanBtn == v.getId()) {
+            rescan();
+        }
+    }
+
+    public void rescan() {
+        ListView deviceList = (ListView) rootView.findViewById(R.id.bluetoothDevices);
+
+        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
+
+        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+        ArrayList list = new ArrayList();
+        uuidList = new ArrayList();
+        // If there are paired devices
+        if (pairedDevices.size() > 0) {
+            // Loop through paired devices
+            for (BluetoothDevice device : pairedDevices) {
+                list.add(device.getName() + "\n" + device.getAddress());
+                uuidList.add(device);
+            }
+        }
+
+        final ArrayAdapter adapter = new ArrayAdapter(getActivity(),android.R.layout.simple_list_item_1, list);
+        deviceList.setAdapter(adapter);
+        deviceList.setOnItemClickListener(myListClickListener); //Method called when the device from the list is clicked
+    }
 
 }

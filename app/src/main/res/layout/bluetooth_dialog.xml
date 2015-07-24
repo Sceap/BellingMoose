@@ -15,6 +15,11 @@
         android:textStyle="bold"
         android:gravity="center"
         />
+    <Button
+        android:id="@+id/rescanBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Rescan devices"/>
     <ListView
         android:id="@+id/bluetoothDevices"
         android:layout_width="match_parent"

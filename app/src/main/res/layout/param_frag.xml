@@ -90,19 +90,47 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="vertical">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Weight threshold: "
-            android:layout_gravity="center_vertical"/>
+            android:layout_gravity="center_horizontal"/>
         <SeekBar
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:max="600"
-            android:progress="300"
+            android:max="150"
+            android:progress="75"
             android:id="@+id/weightSeek"
             />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_horizontal">
+                <TextView
+                    android:id="@+id/weightKg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="150"
+                    android:layout_gravity="center_vertical"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="kg / "
+                    android:layout_gravity="center_vertical"/>
+                <TextView
+                    android:id="@+id/weightLbs"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="317"
+                    android:layout_gravity="center_vertical"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="lbs"
+                    android:layout_gravity="center_vertical"/>
+        </LinearLayout>
     </LinearLayout>
     <Button
         android:layout_width="wrap_content"
