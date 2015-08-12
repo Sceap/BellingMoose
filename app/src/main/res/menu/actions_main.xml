@@ -5,4 +5,9 @@
         android:title="Connect to Device"
         android:showAsAction="always"
         tools:ignore="AppCompatResource" />
+    <item android:id="@+id/action_sync"
+        android:icon="@android:drawable/ic_menu_add"
+        android:title="Sync to Server"
+        android:showAsAction="always"
+        tools:ignore="AppCompatResource" />
 </menu>

@@ -27,11 +27,14 @@
 package com.drsorders.logger;
 
 /* All the needed Android Libraries are loaded below */
+
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.ParcelUuid;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
@@ -52,27 +55,50 @@ import android.widget.CheckBox;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.androidplot.Plot;
 import com.androidplot.xy.BoundaryMode;
 import com.androidplot.xy.LineAndPointFormatter;
 import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.XYPlot;
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.AsyncHttpResponseHandler;
+import com.loopj.android.http.RequestParams;
 
-/* Those Java libraries are used for extracting */
-/* the datas from the Bluetooth port            */
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.DateFormat;
 import java.text.FieldPosition;
 import java.text.Format;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+/* Those Java libraries are used for extracting */
+/* the datas from the Bluetooth port            */
+
 
 
 
@@ -132,6 +158,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
 
     // Keep track of the Menu item to change the title of the item
     Menu menu;
+
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -194,6 +222,65 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         data = new updateGraph();
   }
 
+
+    String[] data_frame = new String[100000];
+    String urlString;
+    boolean canSend = true;
+    /* Asynchronous Calls       */
+    public class sendFrameTask extends AsyncTask<String, Void, String> {
+
+        sendFrameTask() {
+        }
+
+        @Override
+        protected String doInBackground(String ... urlT) {
+            String result = "";
+            // Prepare your search string to be put in a URL
+            // It might have reserved characters or something
+
+            String url = "http://sceap-box.com/drsorders/send_frame.php?DATA=" + urlT[0];
+
+            Log.d(TAG,url);
+
+            HttpClient httpclient = new DefaultHttpClient();
+            HttpPost httppost = new HttpPost("http://sceap-box.com/drsorders/send_frame.php");
+
+
+            // Execute HTTP Post Request
+            canSend = false;
+
+            try {
+                // Add your data
+                List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
+                nameValuePairs.add(new BasicNameValuePair("DATA", urlString));
+                httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+
+
+                HttpResponse response = httpclient.execute(httppost);
+
+
+            } catch (ClientProtocolException e) {
+                // TODO Auto-generated catch block
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+            }
+
+            canSend = true;
+
+            return result;
+        }
+
+        protected void onPostExecute(String result) {
+            if (result.equalsIgnoreCase("error")) {
+                Toast.makeText(getApplicationContext(), result, Toast.LENGTH_LONG).show();
+            }
+        }
+
+        @Override
+        protected void onCancelled() {
+        }
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu items for use in the action bar
@@ -228,6 +315,40 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                     item.setTitle("Connect to Device");
                 }
 
+                return true;
+            case R.id.action_sync:
+
+                // gather your request parameters
+
+                // get the path to sdcard
+                File sdcard = Environment.getExternalStorageDirectory();
+                // to this path add a new directory path
+                File dir = new File(sdcard.getAbsolutePath() + "/drsorders/");
+
+                File myFile = new File(dir,"log.txt");
+                RequestParams params = new RequestParams();
+                try {
+                    params.put("log_file", myFile);
+                } catch(FileNotFoundException e) {}
+
+                // send request
+                AsyncHttpClient client = new AsyncHttpClient();
+                client.post("http://sceap-box.com/drsorders/receive.php", params, new AsyncHttpResponseHandler() {
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, byte[] bytes) {
+                        // handle success response
+
+                        Log.d(TAG,"Ok, should delete file");
+                        String str = new String(bytes);
+                        Log.d(TAG,str);
+                    }
+
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, byte[] bytes, Throwable throwable) {
+
+                        Log.d(TAG,"Nope");
+                    }
+                });
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -353,6 +474,8 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
         private String regEx;
 
         private Pattern frame;
+
+        private int nbFrameStored = 0;
 
         public ConnectedThread(BluetoothSocket socket) {
             mmSocket = socket;
@@ -506,6 +629,84 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                                 Matcher matcher = frame.matcher(mStr);
 
                                 if(matcher.find()) {
+                                    data_frame[nbFrameStored++] = mStr;
+
+                                    if(nbFrameStored == 50) {
+                                    Log.d(TAG,"Send");
+                                        canSend = false;
+
+                                        urlString = "";
+
+                                        Log.d(TAG,nbFrameStored+"");
+
+                                        urlString += "{";//"%7B";
+                                        for(int j=0;j<nbFrameStored;j++) {
+                                            urlString += "\""+j+"\":\"";
+                                            //urlString+="%22"+j+"%22%3A%22";
+                                            for(int i=0;i<data_frame[j].length();i+=2) {
+                                                urlString+=((short)
+                                                        (((((short) data_frame[j].charAt(i + 1))<<8)&0xFF00)                 // Take the LSB, and shift it to MSB position
+                                                                |
+                                                                (~data_frame[j].charAt(i + 0))&0x00FF));                            // Take the MSB, invert the bits and put it in LSB position
+
+
+                                                if(i<data_frame[j].length()-2)
+                                                    urlString+=",";//"%2C";
+                                            }
+                                            urlString += "\"";//"%22";
+                                            if(j<nbFrameStored-1)
+                                                urlString+=",";//"%2C";
+                                        }
+                                        urlString+="}";//"%7D";
+
+
+                                        RequestParams params = new RequestParams();
+                                        params.put("DATA",urlString);
+                                        // send request
+                                        AsyncHttpClient client = new AsyncHttpClient();
+                                        client.post("http://sceap-box.com/drsorders/send_frame.php", params, new AsyncHttpResponseHandler() {
+                                            @Override
+                                            public void onSuccess(int statusCode, Header[] headers, byte[] bytes) {
+                                                // handle success response
+
+                                                canSend = true;
+                                            }
+
+                                            @Override
+                                            public void onFailure(int statusCode, Header[] headers, byte[] bytes, Throwable throwable) {
+
+                                                Log.d(TAG,"Nope");
+                                            }
+                                        });
+
+
+
+                                        nbFrameStored = 0;
+                                    }
+
+                                    // get the path to sdcard
+                                    File sdcard = Environment.getExternalStorageDirectory();
+                                    // to this path add a new directory path
+                                    File dir = new File(sdcard.getAbsolutePath() + "/drsorders/");
+                                    // create this directory if not already created
+                                    dir.mkdir();
+                                    // create the file in which we will write the contents
+                                    File file = new File(dir, "log.txt");
+                                    FileOutputStream os = new FileOutputStream(file, true);
+
+                                    byte[] mByte = new byte[mStr.length()];
+                                    for(int i=0;i<mStr.length();i++)
+                                        mByte[i] = (byte)mStr.charAt(i);
+                                    os.write(mByte,0,mStr.length());
+
+
+                                 /*   for(int i=0;i<matcher.group(0).length();i++)
+                                        os.write(matcher.group(0).charAt(i)); */
+                                    //os.write(matcher.group(0).getBytes(),0,matcher.group(0).length()*2);
+                                    os.flush();
+                                    os.close();
+
+
                                     errorCounter = 0;
                                     if (series[0].size() > HISTORY_SIZE) {
                                         series[0].removeFirst();
@@ -888,8 +1089,6 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
                                             pB.setProgress((series[7].getY(series[7].size()-3).intValue()*2/3));
 
 
-
-
                                         float totHeight = pB.getHeight();
                                         float curHeight = weightThreshold*totHeight/100;
                                         cur.setTranslationY(totHeight - curHeight + 5);
@@ -952,12 +1151,22 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
     public void syncRTC(View v) {
         Date d = new Date();
 
-        if(isConnected)
-            btThread.write(("#YRS"+String.format("%05d",d.getYear()-100)).getBytes());
+        DateFormat df_m = new SimpleDateFormat("000MM");
+        DateFormat df_d = new SimpleDateFormat("000dd");
+        DateFormat df_y = new SimpleDateFormat("000yy");
+        String date_m = df_m.format(Calendar.getInstance().getTime());
+        String date_d = df_d.format(Calendar.getInstance().getTime());
+        String date_y = df_y.format(Calendar.getInstance().getTime());
+
+        if(isConnected) {
+            btThread.write(("#YRS"+date_y).getBytes());
+        Log.d(TAG, ("#YRS" + date_y));
             btThread.write(".".getBytes());
-            btThread.write(("#MTH"+String.format("%05d",d.getMonth())).getBytes());
+            btThread.write(("#MTH" + date_m).getBytes());
+        Log.d(TAG, ("#MTH" + date_m));
             btThread.write(".".getBytes());
-            btThread.write(("#DYS"+String.format("%05d",d.getDay())).getBytes());
+            btThread.write(("#DYS"+date_d).getBytes());
+            Log.d(TAG, ("#DYS" + date_d));
             btThread.write(".".getBytes());
             btThread.write(("#HRS"+String.format("%05d",d.getHours())).getBytes());
             btThread.write(".".getBytes());
@@ -965,6 +1174,7 @@ public class MainActivity extends ActionBarActivity implements ActionBar.TabList
             btThread.write(".".getBytes());
             btThread.write(("#SEC" + String.format("%05d", d.getSeconds())).getBytes());
             btThread.write(".".getBytes());
+        }
     }
 
     public void sendCommand(View v) {
